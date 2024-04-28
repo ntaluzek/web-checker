@@ -1,0 +1,11 @@
+{
+    "name": "Web Checker",
+    "version": "0.1",
+    "description": "Cycle through a list of websites that you like to check regularly.",
+    "permissions": ["contentSettings", "activeTab"],
+    "action": {
+        //"default_icon": "webchecker.png",
+        "default_popup": "popup.html"
+    },
+    "manifest_version": 3
+}
