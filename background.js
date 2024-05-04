@@ -1,6 +1,6 @@
 chrome.runtime.onInstalled.addListener(() => {
     const test1 = {
-        listName: 'Test 1 List',
+        listName: 'Web Comics',
         urlList: [
             'https://www.questionablecontent.net',
             'https://www.smbc-comics.com',
@@ -33,7 +33,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Store transition information for each tab
+const tabTransitions = new Map();
 
+// Listen for the onCommitted event to store the transition type
+chrome.webNavigation.onCompleted.addListener((details) => {
+  // Save the transition type for the tab
+  tabTransitions.set(details.tabId, details.transitionType);
+});
+
+// Listen for the onUpdated event to decide when to inject the content script
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Check if the tab has completed loading
+  if (changeInfo.status === "complete") {
+    const transitionType = tabTransitions.get(tabId);
+
+    // Inject the content script only if the transition type is not 'typed'
+    if (transitionType !== 'typed') {
+      injectContentScript(tabId);
+    }
+
+    // Optionally, clean up the transition type after injection
+    tabTransitions.delete(tabId);
+  }
+});
+
+// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+//     // Monitor when the URL changes or the status changes to "complete"
+//     if (changeInfo.status === "complete") {
+//       // The tab has finished loading; inject your content script
+//       injectContentScript(tab.id);
+//     };
+// });
 
 function startUrlIteration(list, action) {
     chrome.storage.sync.get("userLists", (data) => {

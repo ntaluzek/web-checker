@@ -1,42 +1,42 @@
 console.log("Injected");
 let selectedList;
-let headerBarCreated = false;
+let FloatingBoxCreated = false;
 
 chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
   if (message.action === "listPassing") {
     selectedList = message.list;
 
-    if (!headerBarCreated) {
-      insertHeaderBar(selectedList);
-      headerBarCreated = true;
+    if (!FloatingBoxCreated) {
+      createFloatingBox(selectedList);
+      FloatingBoxCreated = true;
     }
   }
   sendReponse({ status: 'success'});
 });
 
-const insertHeaderBar = (selectedList) => {
-    // Create Header Bar
-    const headerBar = document.createElement('div');
-    headerBar.id = 'headerbar';
-    headerBar.style.position = 'fixed';
-    headerBar.style.zIndex = '999999';
-    headerBar.style.bottom = '10px';
-    headerBar.style.left = '0';
-    headerBar.style.width = '100%';
-    headerBar.style.backgroundColor = '#f0f0f0';
-    document.body.insertBefore(headerBar, document.body.firstElementChild);
+// const insertHeaderBar = (selectedList) => {
+//     // Create Header Bar
+//     const headerBar = document.createElement('div');
+//     headerBar.id = 'headerbar';
+//     headerBar.style.position = 'fixed';
+//     headerBar.style.zIndex = '999999';
+//     headerBar.style.bottom = '10px';
+//     headerBar.style.left = '0';
+//     headerBar.style.width = '100%';
+//     headerBar.style.backgroundColor = '#f0f0f0';
+//     document.body.insertBefore(headerBar, document.body.firstElementChild);
 
-    // Create Next Button
-    const button = document.createElement("button");
-    button.innerText = selectedList;
-    button.onclick = () => {
-      chrome.runtime.sendMessage({ action: "next", list: selectedList }, (response) => {
-        console.log('Response from background:', response);
-      });
-    };
-    document.getElementById('headerbar').appendChild(button);
-    createFloatingBox(selectedList);
-  };
+//     // Create Next Button
+//     const button = document.createElement("button");
+//     button.innerText = selectedList;
+//     button.onclick = () => {
+//       chrome.runtime.sendMessage({ action: "next", list: selectedList }, (response) => {
+//         console.log('Response from background:', response);
+//       });
+//     };
+//     document.getElementById('headerbar').appendChild(button);
+//     createFloatingBox(selectedList);
+//   };
 
   function createFloatingBox(list) {
     // Create the container for the floating box
@@ -45,12 +45,12 @@ const insertHeaderBar = (selectedList) => {
   
     // Add some basic text
     const text = document.createElement('p');
-    text.textContent = 'This is some basic text.'; // Text content
+    text.textContent = list; // Text content
     floatingBox.appendChild(text);
   
     // Create a button
     const button = document.createElement('button');
-    button.textContent = 'Click Me'; // Button text
+    button.textContent = 'Next'; // Button text
     button.addEventListener('click', () => {
       chrome.runtime.sendMessage({ action: "next", list: list }, (response) => {
         console.log('Response from background:', response);
@@ -71,6 +71,7 @@ const insertHeaderBar = (selectedList) => {
     style.textContent = `
       .floating-box {
         position: fixed;
+        width: 100px;
         bottom: 20px;
         right: 20px;
         background-color: white;
@@ -79,6 +80,7 @@ const insertHeaderBar = (selectedList) => {
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         z-index: 9999;
         border-radius: 8px;
+        text-align: center;
       }
   
       .floating-box p {
