@@ -1,11 +1,25 @@
 {
+    "manifest_version": 3,
     "name": "Web Checker",
     "version": "0.1",
     "description": "Cycle through a list of websites that you like to check regularly.",
-    "permissions": ["contentSettings", "activeTab"],
+    "permissions": [
+        "storage",
+        "scripting",
+        "tabs",
+        "activeTab"
+    ],
     "action": {
-        //"default_icon": "webchecker.png",
         "default_popup": "popup.html"
     },
-    "manifest_version": 3
+    "background": {
+        "service_worker": "background.js"
+      },
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": true
+    },
+    "host_permissions": [
+      "*://*/"
+    ]
 }
