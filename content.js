@@ -40,16 +40,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
 
   function createFloatingBox(list) {
     // Create the container for the floating box
+    const shadowContainer = document.createElement('div');
+    const shadowRoot = shadowContainer.attachShadow({mode: 'open'}); // Create a shadow root for style encapsulation
     const floatingBox = document.createElement('div');
     floatingBox.className = 'floating-box'; // Assign a class for styling
+    
+    // Create a close button (x)
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-button';
+    closeButton.textContent = '×'; // Unicode multiplication symbol
+    closeButton.title = 'Close';
+    closeButton.style.top = '3px'; // Position at the top-right
+    closeButton.style.right = '3px'; 
+    closeButton.addEventListener('click', () => {
+      chrome.runtime.sendMessage({action: "close"}, (response) => {
+        if (response && response.success) {
+          console.log('Response from background on close:', response);
+          shadowContainer.remove(); // Removes the floating box
+        }
+        else {
+          console.error('Close action failed or no response received.');
+        }
+      });
+      
+    });
+    floatingBox.appendChild(closeButton);
   
     // Add some basic text
     const text = document.createElement('p');
+    text.id = 'extensionText';
     text.textContent = list; // Text content
+    text.style.fontFamily = 'Arial, Helvetica, sans-serif';
     floatingBox.appendChild(text);
   
-    // Create a button
+    // Create a next button
     const button = document.createElement('button');
+    button.className = 'next-button';
+    button.id = 'extensionNextButton';
     button.textContent = 'Next'; // Button text
     button.addEventListener('click', () => {
       chrome.runtime.sendMessage({ action: "next", list: list }, (response) => {
@@ -57,12 +84,80 @@ chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
       });
     });
     floatingBox.appendChild(button);
+
+
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .floating-box {
+        position: fixed;
+        width: 100px;
+        bottom: 20px;
+        right: 20px;
+        background-color: rgba(255, 255, 255, 0.4);
+        border: 1px solid #ccc;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        border-radius: 8px;
+        text-align: center;
+      }
+  
+      .floating-box p#extensionText {
+        margin: 0; // No margin for the text
+        margin-top: -5px;
+        font-family: Arial, Helvetica, sans-serif;
+        font-variant: normal;
+        font-size: 16px;
+        font-weight: normal;
+      }
+  
+      .floating-box .next-button {
+        background-color: rgba(40, 60, 200, 0.8);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: Arial, Helvetica, sans-serif;
+        font-variant: normal;
+        font-size: 20px;
+        font-weight: normal;
+      }
+  
+      .floating-box .next-button:hover {
+        background-color: rgba(40, 60, 200, 1); //solid on hover
+      }
+
+      .floating-box .close-button {
+        position: absolute; // Position relative to the floating box
+        top: 3px; // Adjust to ensure the circle is within the floating box
+        right: 3px; // Position the button at the top-right corner
+        background-color: red; // Red circle
+        color: white;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        width: 20px;
+        height: 20px;
+        font-size: 16px;
+        text-align: center;
+        line-height: 20px; // Center the X vertically
+      }
+
+      .floating-box .close-button:hover {
+        background-color: darkred; // Change color on hover
+      }
+    `;
+
+    shadowRoot.appendChild(style);
+    shadowRoot.appendChild(floatingBox);
   
     // Insert the floating box into the document
-    document.body.appendChild(floatingBox);
+    document.body.appendChild(shadowContainer);
   
     // Add the necessary CSS to style and position the floating box
-    addFloatingBoxStyles();
+    // addFloatingBoxStyles();
   }
   
   // Function to add CSS styles for the floating box
@@ -83,8 +178,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
         text-align: center;
       }
   
-      .floating-box p {
+      .floating-box p#extensionText {
         margin: 0; // No margin for the text
+        font-family: Arial, Helvetica, sans-serif;
       }
   
       .floating-box button {
