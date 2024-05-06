@@ -1,10 +1,14 @@
 console.log("Injected");
 let selectedList;
+let listLength;
+let listIndex;
 let FloatingBoxCreated = false;
 
 chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
   if (message.action === "listPassing") {
     selectedList = message.list;
+    listLength = message.length;
+    listProgress = message.index + 1;
 
     if (!FloatingBoxCreated) {
       createFloatingBox(selectedList);
@@ -77,7 +81,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
     const button = document.createElement('button');
     button.className = 'next-button';
     button.id = 'extensionNextButton';
-    button.textContent = 'Next'; // Button text
+    if (listProgress === listLength) {
+      button.textContent = 'Restart';
+    }
+    else {
+      button.textContent = 'Next'; // Button text
+    }
     button.addEventListener('click', () => {
       chrome.runtime.sendMessage({ action: "next", list: list }, (response) => {
         console.log('Response from background:', response);
@@ -85,7 +94,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
     });
     floatingBox.appendChild(button);
 
-
+    // Add some basic text
+    const progress = document.createElement('p');
+    progress.id = 'extensionText';
+    progress.textContent = listProgress + ' of ' + listLength; // Text content
+    progress.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    floatingBox.appendChild(progress);
+  
 
     const style = document.createElement('style');
     style.textContent = `

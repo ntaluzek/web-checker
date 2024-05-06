@@ -22,6 +22,8 @@ chrome.runtime.onInstalled.addListener(() => {
 
 
 let selectedList;
+let listIndex;
+let listLength;
 let mainTab;
 
 // Listen for messages from the popup
@@ -77,9 +79,11 @@ function startUrlIteration(list, action) {
         chrome.storage.sync.get("userLists", (data) => {
             let userLists = data.userLists
             const userList = userLists.find(obj => obj.listName === list);
-            if (userList.index < userList.urlList.length) {
+            listLength = userList.urlList.length;
+            listIndex = userList.index;
+            if (listIndex < listLength) {
                 if (action === "start") {
-                    chrome.tabs.create({ url: userList.urlList[userList.index] }, (tab) => {
+                    chrome.tabs.create({ url: userList.urlList[listIndex] }, (tab) => {
                     console.log("Created new tab:", tab);
                     chrome.storage.local.set({sessionTabId: tab.id});
                     
@@ -93,7 +97,7 @@ function startUrlIteration(list, action) {
                         if (currentTab) {
                             const targetTabId = currentTab.id;
 
-                            chrome.tabs.update(targetTabId, { url: userList.urlList[userList.index] }, () => {
+                            chrome.tabs.update(targetTabId, { url: userList.urlList[listIndex] }, () => {
                                 console.log("Updated to next page in the same tab");
                             });
                         } else {
@@ -107,7 +111,7 @@ function startUrlIteration(list, action) {
                 }
 
                 userList.index += 1;
-                if (userList.index >= userList.urlList.length) {
+                if (userList.index >= listLength) {
                     userList.index = 0;
                 };
                 chrome.storage.sync.set({userLists: userLists});
@@ -134,7 +138,7 @@ function injectContentScript(tabId) {
             else {
                 console.log("Content script injected:", results);
                 chrome.tabs.sendMessage(tabId, {
-                    action: "listPassing", list: selectedList
+                    action: "listPassing", list: selectedList, index: listIndex, length: listLength
                 }, (response) => {
                     if (chrome.runtime.lastError) {
                         console.error('Error sending message:', chrome.runtime.lastError.message);
