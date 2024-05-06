@@ -1,0 +1,24 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.list-box {
+    margin-bottom: 10px; // Space between list boxes
+}
+
+.list-name {
+    width: 100%;
+    padding: 5px;
+    margin-bottom: 5px; // Space between the input field and textarea
+}
+
+.url-list {
+    width: 100%;
+    height: 100px; // Set height for the textarea
+}
+
+button {
+    padding: 5px 10px;
+    margin-right: 10px; // Space between buttons
+    cursor: pointer;
+}

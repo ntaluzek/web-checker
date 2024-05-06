@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Extension Settings</title>
-        <script src="options.js"></script>
-    </head>
-    <body>
-        <label for="urlList">Enter URLs (comma-separated):</label>
-        <input type="text" id="urlList">
-        <button id="saveUrls">Save</button>
-    </body>
+<html lang="en">
+<head>
+    <title>Options</title>
+    <link rel="stylesheet" href="options.css"> <!-- Optional CSS for styling -->
+</head>
+<body>
+    <h1>Manage URL Lists</h1>
+    <div id="listContainer"> <!-- Container to hold the dynamic list boxes -->
+    </div>
+    <button id="addListButton">Add New List</button> <!-- Button to add more lists -->
+    <button id="saveButton">Save Lists</button> <!-- Button to save lists -->
+    <script src="options.js"></script> <!-- Script to handle the options logic -->
+</body>
 </html>

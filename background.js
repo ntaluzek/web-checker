@@ -1,24 +1,24 @@
-chrome.runtime.onInstalled.addListener(() => {
-    const test1 = {
-        listName: 'Web Comics',
-        urlList: [
-            'https://www.questionablecontent.net',
-            'https://www.smbc-comics.com',
-            'https://www.xkcd.com',
-            'https://www.toothpastefordinner.com'
-        ],
-        index: 0
-    }
-    const test2 = {
-        listName: 'Test 2 List',
-        urlList: [
-            'https://www.example3.com',
-            'https://www.example4.com'
-        ],
-        index: 0
-    }
-    chrome.storage.sync.set({ userLists: [test1, test2] }); // Initialize with an empty list
-  });
+// chrome.runtime.onInstalled.addListener(() => {
+//     const test1 = {
+//         listName: 'Web Comics',
+//         urlList: [
+//             'https://www.questionablecontent.net',
+//             'https://www.smbc-comics.com',
+//             'https://www.xkcd.com',
+//             'https://www.toothpastefordinner.com'
+//         ],
+//         index: 0
+//     }
+//     const test2 = {
+//         listName: 'Test 2 List',
+//         urlList: [
+//             'https://www.example3.com',
+//             'https://www.example4.com'
+//         ],
+//         index: 0
+//     }
+//     chrome.storage.sync.set({ userLists: [test1, test2] }); // Initialize with an empty list
+//   });
 
 
 let selectedList;
