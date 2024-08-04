@@ -22,41 +22,22 @@ document.addEventListener("DOMContentLoaded", () => {
             chrome.runtime.openOptionsPage();
         });
     }
-    
-//   addButton.addEventListener("click", () => {
-//       const newUrl = urlInput.value.trim();
-//       if (newUrl) {
-//         chrome.storage.sync.get("urlList", (data) => {
-//           const urlList = data.urlList || [];
-//           if (!urlList.includes(newUrl)) {
-//             urlList.push(newUrl);
-//             chrome.storage.sync.set({ urlList });
-//             renderUserLists(urlList); // Refresh the list
-//             urlInput.value = ""; // Clear the input
-//           }
-//         });
-//       }
-//     });
   
-    // Function to display the list of URLs with remove buttons
-    function renderUserLists(userLists) {
-        userLists.forEach((list, index) => {
-        const listItem = document.createElement("option");
-        listItem.textContent = list.listName;
-        listSelector.appendChild(listItem);
+    // Function to display the list of URLs with buttons
+function renderUserLists(userLists) {
+  const listContainer = document.getElementById("listContainer");
+  listContainer.innerHTML = ''; // Clear any existing buttons
+
+  userLists.forEach((list, index) => {
+      const button = document.createElement("button");
+      button.textContent = list.listName;
+      button.classList.add("btn", "btn-primary", "list-button"); // Add Bootstrap classes
+      button.addEventListener("click", () => {
+          chrome.runtime.sendMessage({ action: "start", list: list.listName});
+          console.log(`Button ${list.listName} clicked`);
       });
-    }
+      listContainer.appendChild(button);
+  });
+}
+
 });
-// document.addEventListener('DOMContentLoaded', function () {
-//     document.getElementById('startNavigation').addEventListener('click', () => {
-//         // Send a message to the content script to start navigation
-//         //chrome.tabs.create({url: "https://www.questionablecontent.net"})
-//         chrome.action.openPopup();
-//     });
-    
-    
-//     document.getElementById('openSettings').addEventListener('click', () => {
-//         // Open the settings page
-//         chrome.runtime.openOptionsPage();
-//     });
-// });

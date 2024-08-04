@@ -3,21 +3,20 @@
     <head>
         <title>Web Checker</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.9.1/font/bootstrap-icons.min.css">
         <link rel="stylesheet" href="popup.css">
     </head>
     <body>
-        <div class="text-center">
-            <!-- Button to start the URL iteration -->
-            <button class="btn btn-primary" id="start">Start</button>
-            <br>
-            <br>
-            <!-- Dropdown URL List Selector -->
-            <label for="urlList">URL List:</label>
-            <select class="form-control" name="urlList" id="listSelector">
-            </select>
+        <div class="popup-container text-center">
+            <h1 class="text-primary">Web Checker</h1>
+            <!-- Buttons for URL Lists -->
+            <div id="listContainer" class="button-container"></div>
             <br>
             <!-- Button to access the settings -->
-            <button class="btn btn-primary" id="settings">Settings</button>
+            <button class="icon-link text-secondary" id="settings">
+                <i class="bi bi-gear" aria-hidden="true"></i>
+                Settings
+            </button>            
 
             <script src="popup.js"></script>
         </div>

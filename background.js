@@ -1,26 +1,3 @@
-// chrome.runtime.onInstalled.addListener(() => {
-//     const test1 = {
-//         listName: 'Web Comics',
-//         urlList: [
-//             'https://www.questionablecontent.net',
-//             'https://www.smbc-comics.com',
-//             'https://www.xkcd.com',
-//             'https://www.toothpastefordinner.com'
-//         ],
-//         index: 0
-//     }
-//     const test2 = {
-//         listName: 'Test 2 List',
-//         urlList: [
-//             'https://www.example3.com',
-//             'https://www.example4.com'
-//         ],
-//         index: 0
-//     }
-//     chrome.storage.sync.set({ userLists: [test1, test2] }); // Initialize with an empty list
-//   });
-
-
 let selectedList;
 let listIndex;
 let listLength;
@@ -41,15 +18,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Tab update listener removed.');
   }
 });
-
-// Store transition information for each tab
-//const tabTransitions = new Map();
-
-// Listen for the onCommitted event to store the transition type
-// chrome.webNavigation.onCommitted.addListener((details) => {
-//     console.log("Navigation Completed:", details.tabId, "Transition Type:", details.transitionType, "Full Details:", details);
-//     tabTransitions.set(details.tabId, details.transitionType);
-//   });
 
 // Listen for the onUpdated event to decide when to inject the content script
 function onTabUpdated (tabId, changeInfo, tab) {
@@ -72,8 +40,6 @@ function onTabUpdated (tabId, changeInfo, tab) {
       //tabTransitions.delete(tabId);
     }
   };
-
-
 
 function startUrlIteration(list, action) {
         chrome.storage.sync.get("userLists", (data) => {
@@ -151,56 +117,3 @@ function injectContentScript(tabId) {
         //}
     });
 }
-
-  
-// function shouldInjectContentScript(url) {
-//     console.log("checking url match before injection");
-//     // Return a Promise that resolves to true if the URL is found, and false otherwise
-//     return new Promise((resolve, reject) => {
-//         // Get userLists from Chrome storage
-//         chrome.storage.sync.get('userLists', function(result) {
-//         if (chrome.runtime.lastError) {
-//             reject(chrome.runtime.lastError); // Reject if there's an error with Chrome storage
-//             return;
-//         }
-
-//         if (result.userLists && Array.isArray(result.userLists)) {
-//             // Use the some() method to check if any urlList contains the given URL
-//             const exists = result.userLists.some(obj => obj.urlList.includes(url));
-//             resolve(exists); // Resolve the Promise with the result
-//         } else {
-//             resolve(false); // Resolve with false if userLists is not found or is empty
-//         }
-//         });
-//     });
-// }
-
-
-//return urlList.some((listedUrl) => url.startsWith(listedUrl)); // Check if the URL matches any in the list
-
-
-// // background.js
-// const urls = ["https://questionablecontent.net", "https://smbc-comics.com", "https://google.com"];
-// let currentIndex = 0;
-
-// chrome.action.onClicked.addListener((tab) => {
-//   if (currentIndex < urls.length) {
-//     chrome.tabs.update(tab.id, { url: urls[currentIndex] });
-//     currentIndex++;
-//   } else {
-//     console.log("All URLs visited!");
-//   }
-// });
-
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//     if (message.action === "iterate_urls") {
-//         console.log('Message received');
-//       if (currentIndex < urlList.length) {
-//         chrome.tabs.create({ url: urlList[currentIndex] });
-//         currentIndex++;
-//       } else {
-//         currentIndex = 0; // Reset index if it reaches the end of the list
-//       }
-//     }
-//   });
-
