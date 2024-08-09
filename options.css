@@ -1,25 +1,42 @@
-body {
-    font-family: Arial, sans-serif;
-}
-
-.list-box {
-    margin-bottom: 10px;
-}
-
-.list-name {
-    width: 100%;
-    padding: 5px;
-    margin-bottom: 5px;
-}
-
-.url-list {
-    width: 100%;
-    height: 100px;
+h1 {
+    font-size: 28px;
 }
 
 button {
-    padding: 5px 10px;
-    margin-right: 10px;
-    cursor: pointer;
+    display: block;
+    margin: 10px auto;
 }
 
+img {
+    margin: 0 10px;
+}
+
+.content-centered {
+    margin: 0 auto;
+    width: 60%;
+    padding: 10px auto;
+}
+
+.list-name {
+    display: block;
+    width: 100%;
+    font-weight: bold;
+}
+
+.url-list {
+    display: block;
+    width: 100%;
+    height: 150px;
+    resize: vertical;
+}
+
+#listContainer {
+    display: block;
+    align-items: center;
+    align-content: center;
+}
+
+.list-box {
+    background-color: lightgrey;
+    margin: 5px 0;
+}
