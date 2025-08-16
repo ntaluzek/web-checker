@@ -38,6 +38,7 @@ function renderUserLists(userLists) {
         listName.textContent = list.listName;
         listName.style.fontWeight = "bold";
         listName.style.marginBottom = "10px";
+        listName.style.fontSize = "1.2em"; // Make the list name larger
 
         // Create a container for the buttons
         const buttonRow = document.createElement("div");
@@ -55,6 +56,7 @@ function renderUserLists(userLists) {
         resumeButton.textContent = progressText;
         resumeButton.classList.add("btn", "btn-primary", "resume-button");
         resumeButton.style.flex = "1";
+        resumeButton.style.fontSize = "0.9em"; // Make the button text smaller
         resumeButton.style.marginRight = "5px";
 
 		// Set hover text (tooltip) to show the next URL
@@ -70,6 +72,7 @@ function renderUserLists(userLists) {
 		restartButton.style.width = "40px"; // Restrict width to fit the icon
 		restartButton.style.textAlign = "center"; // Center the icon
 		restartButton.style.marginLeft = "5px";
+        restartButton.style.fontSize = "0.9em"; // Make the button text smaller
 		restartButton.textContent = String.fromCharCode(0x21BA); // Unicode for counterclockwise arrow
 		restartButton.addEventListener("click", () => {
 			chrome.runtime.sendMessage({ action: "restart", list: list.listName });
