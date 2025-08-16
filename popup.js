@@ -19,39 +19,71 @@ document.addEventListener("DOMContentLoaded", () => {
 // Function to display the list of URLs with buttons
 function renderUserLists(userLists) {
     const listContainer = document.getElementById("listContainer");
-    // Clear any existing buttons
+    // Clear any existing content
     listContainer.innerHTML = '';
-    // Iterate through every user URL list and create buttons for that list
-    userLists.forEach((list, index) => {
-        // Create a container for the buttons
-        const buttonContainer = document.createElement("div");
-        buttonContainer.classList.add("button-container");
-        buttonContainer.style.display = "flex";
-        buttonContainer.style.alignItems = "center";
-        buttonContainer.style.marginBottom = "10px";
+    // Iterate through every user URL list and create the new format
+    userLists.forEach((list) => {
+        // Create a container for the list box
+        const listBox = document.createElement("div");
+        listBox.classList.add("list-box");
+        listBox.style.border = "1px solid #ccc";
+        listBox.style.borderRadius = "8px";
+        listBox.style.padding = "10px";
+        listBox.style.marginBottom = "15px";
+        listBox.style.textAlign = "center";
+        listBox.style.backgroundColor = "#f9f9f9";
 
-        // Create the "Start" button
-        const startButton = document.createElement("button");
-        startButton.textContent = list.listName;
-        startButton.classList.add("btn", "btn-primary", "list-button");
-        startButton.style.marginRight = "10px";
-        startButton.addEventListener("click", () => {
+        // Create the list name element
+        const listName = document.createElement("div");
+        listName.textContent = list.listName;
+        listName.style.fontWeight = "bold";
+        listName.style.marginBottom = "10px";
+
+        // Create a container for the buttons
+        const buttonRow = document.createElement("div");
+        buttonRow.style.display = "flex";
+        buttonRow.style.justifyContent = "space-between";
+        buttonRow.style.alignItems = "center";
+
+        // Calculate progress for the "Resume" button
+        const currentIndex = list.index || 0;
+        const totalUrls = list.urlList.length;
+        const progressText = `Resume (${currentIndex + 1}/${totalUrls})`;
+
+        // Create the "Resume" button
+        const resumeButton = document.createElement("button");
+        resumeButton.textContent = progressText;
+        resumeButton.classList.add("btn", "btn-primary", "resume-button");
+        resumeButton.style.flex = "1";
+        resumeButton.style.marginRight = "5px";
+
+		// Set hover text (tooltip) to show the next URL
+		resumeButton.title = list.urlList[currentIndex]; // Tooltip shows the current URL
+
+        resumeButton.addEventListener("click", () => {
             chrome.runtime.sendMessage({ action: "start", list: list.listName });
         });
 
-        // Create the "Restart" button
-        const restartButton = document.createElement("button");
-        restartButton.textContent = "Restart";
-        restartButton.classList.add("btn", "btn-secondary", "restart-button");
-        restartButton.addEventListener("click", () => {
-            chrome.runtime.sendMessage({ action: "restart", list: list.listName });
-        });
+		// Create the "Restart" button with an icon
+		const restartButton = document.createElement("button");
+		restartButton.classList.add("btn", "btn-secondary", "restart-button");
+		restartButton.style.width = "40px"; // Restrict width to fit the icon
+		restartButton.style.textAlign = "center"; // Center the icon
+		restartButton.style.marginLeft = "5px";
+		restartButton.textContent = String.fromCharCode(0x21BA); // Unicode for counterclockwise arrow
+		restartButton.addEventListener("click", () => {
+			chrome.runtime.sendMessage({ action: "restart", list: list.listName });
+		});
 
-        // Append both buttons to the container
-        buttonContainer.appendChild(startButton);
-        buttonContainer.appendChild(restartButton);
+        // Append the buttons to the button row
+        buttonRow.appendChild(resumeButton);
+        buttonRow.appendChild(restartButton);
 
-        // Append the container to the list container
-        listContainer.appendChild(buttonContainer);
+        // Append the list name and button row to the list box
+        listBox.appendChild(listName);
+        listBox.appendChild(buttonRow);
+
+        // Append the list box to the list container
+        listContainer.appendChild(listBox);
     });
 };
