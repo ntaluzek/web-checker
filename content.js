@@ -1,8 +1,26 @@
+// Prevent multiple executions of this content script
+if (window.webCheckerContentScriptLoaded) {
+	// Script already loaded, exit early
+} else {
+	window.webCheckerContentScriptLoaded = true;
+
 // Declare global variables
 let selectedList;
 let listLength;
 let listIndex;
 let FloatingBoxCreated = false;
+let nextButton = null; // Store reference to the next/restart button
+let keyboardShortcut = null; // Store the current keyboard shortcut configuration
+let showTooltip = true; // Store whether to show tooltip (default: true)
+
+// Default keyboard shortcut configuration
+const defaultShortcut = {
+	alt: true,
+	ctrl: false,
+	shift: false,
+	meta: false,
+	key: 'ArrowRight'
+};
 
 // Listen for message details about URL list
 chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
@@ -17,6 +35,91 @@ chrome.runtime.onMessage.addListener((message, sender, sendReponse) => {
 		}
 	}
 	sendReponse({ status: 'success'});
+});
+
+// Load keyboard shortcut configuration and tooltip setting from storage
+chrome.storage.sync.get(["keyboardShortcut", "showTooltip"], (data) => {
+	keyboardShortcut = data.keyboardShortcut || defaultShortcut;
+	showTooltip = data.showTooltip !== undefined ? data.showTooltip : true;
+});
+
+// Listen for changes to keyboard shortcut and tooltip setting in storage (real-time updates)
+chrome.storage.onChanged.addListener((changes, areaName) => {
+	if (areaName === 'sync') {
+		// Update keyboard shortcut if changed
+		if (changes.keyboardShortcut) {
+			keyboardShortcut = changes.keyboardShortcut.newValue || defaultShortcut;
+			// Update button tooltip when shortcut changes
+			if (nextButton) {
+				updateButtonTooltip(nextButton);
+			}
+		}
+
+		// Update tooltip visibility if changed
+		if (changes.showTooltip) {
+			showTooltip = changes.showTooltip.newValue !== undefined ? changes.showTooltip.newValue : true;
+			// Update button tooltip when setting changes
+			if (nextButton) {
+				updateButtonTooltip(nextButton);
+			}
+		}
+	}
+});
+
+// Function to format shortcut for display in tooltip
+function formatShortcutForTooltip(shortcut) {
+	if (!shortcut) return '';
+
+	const modifiers = [];
+	if (shortcut.ctrl) modifiers.push('Ctrl');
+	if (shortcut.alt) modifiers.push('Alt');
+	if (shortcut.shift) modifiers.push('Shift');
+	if (shortcut.meta) modifiers.push('Meta');
+
+	// Format the key name for better readability
+	let keyName = shortcut.key;
+	if (keyName.startsWith('Arrow')) {
+		keyName = keyName.replace('Arrow', 'Arrow ');
+	}
+
+	return modifiers.length > 0
+		? `${modifiers.join(' + ')} + ${keyName}`
+		: keyName;
+}
+
+// Function to update button tooltip with current keyboard shortcut
+function updateButtonTooltip(button) {
+	if (showTooltip) {
+		const shortcutText = formatShortcutForTooltip(keyboardShortcut || defaultShortcut);
+		button.title = `Keyboard shortcut: ${shortcutText}`;
+	} else {
+		// Remove tooltip if disabled
+		button.title = '';
+	}
+}
+
+// Add keyboard shortcut listener for Next/Restart button
+// Supports configurable keyboard shortcuts (default: Alt + ArrowRight)
+document.addEventListener('keydown', (event) => {
+	// Skip if shortcut hasn't loaded yet or button doesn't exist
+	if (!keyboardShortcut || !nextButton) {
+		return;
+	}
+
+	// Check if the pressed key combination matches the configured shortcut
+	const shortcutMatches =
+		event.key === keyboardShortcut.key &&
+		event.ctrlKey === keyboardShortcut.ctrl &&
+		event.altKey === keyboardShortcut.alt &&
+		event.shiftKey === keyboardShortcut.shift &&
+		event.metaKey === keyboardShortcut.meta;
+
+	if (shortcutMatches) {
+		// Prevent default browser behavior
+		event.preventDefault();
+		// Trigger the next/restart button click
+		nextButton.click();
+	}
 });
 
 // Create the floating navigation box for proceeding through the URL list
@@ -71,6 +174,12 @@ function createFloatingBox(list) {
 		chrome.runtime.sendMessage({ action: 'next', list: list });
 	});
 	floatingBox.appendChild(button);
+
+	// Store button reference globally for keyboard shortcut access
+	nextButton = button;
+
+	// Add tooltip with keyboard shortcut hint
+	updateButtonTooltip(button);
 
 	// Add text to show progress through URL list (X of Y)
 	const progress = document.createElement('span');
@@ -157,3 +266,5 @@ function createFloatingBox(list) {
 	// Insert the floating box into the document
 	document.body.appendChild(shadowContainer);
 };
+
+} // End of script guard

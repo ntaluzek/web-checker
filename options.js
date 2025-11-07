@@ -3,6 +3,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const listContainer = document.getElementById('listContainer');
     const addListButton = document.getElementById('addListButton');
     const saveButton = document.getElementById('saveButton');
+    const captureShortcutButton = document.getElementById('captureShortcutButton');
+    const resetShortcutButton = document.getElementById('resetShortcutButton');
+    const currentShortcutDisplay = document.getElementById('currentShortcut');
+    const tooltipToggle = document.getElementById('tooltipToggle');
+    const tooltipToggleLabel = document.getElementById('tooltipToggleLabel');
+
+    // Default keyboard shortcut configuration
+    const defaultShortcut = {
+        alt: true,
+        ctrl: false,
+        shift: false,
+        meta: false,
+        key: 'ArrowRight'
+    };
 
     // Load existing lists from Chrome storage when the options page loads
     chrome.storage.sync.get("userLists", (data) => {
@@ -107,6 +121,147 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Show an alert message indicating success
                 alert('Your lists have been successfully saved!');
+            }
+        });
+    });
+
+    // ============ Keyboard Shortcut Configuration ============
+
+    // Function to format shortcut for display
+    function formatShortcut(shortcut) {
+        const modifiers = [];
+        if (shortcut.ctrl) modifiers.push('Ctrl');
+        if (shortcut.alt) modifiers.push('Alt');
+        if (shortcut.shift) modifiers.push('Shift');
+        if (shortcut.meta) modifiers.push('Meta');
+
+        // Format the key name for better readability
+        let keyName = shortcut.key;
+        if (keyName.startsWith('Arrow')) {
+            keyName = keyName.replace('Arrow', 'Arrow ');
+        }
+
+        return modifiers.length > 0
+            ? `${modifiers.join(' + ')} + ${keyName}`
+            : keyName;
+    }
+
+    // Load and display current keyboard shortcut
+    function loadShortcut() {
+        chrome.storage.sync.get("keyboardShortcut", (data) => {
+            const shortcut = data.keyboardShortcut || defaultShortcut;
+            currentShortcutDisplay.textContent = formatShortcut(shortcut);
+        });
+    }
+
+    // Function to update tooltip toggle label appearance
+    function updateTooltipToggleLabelAppearance(isEnabled) {
+        if (isEnabled) {
+            tooltipToggleLabel.classList.remove('text-muted');
+        } else {
+            tooltipToggleLabel.classList.add('text-muted');
+        }
+    }
+
+    // Load tooltip toggle setting
+    function loadTooltipToggle() {
+        chrome.storage.sync.get("showTooltip", (data) => {
+            // Default to true (show tooltip) if not set
+            const showTooltip = data.showTooltip !== undefined ? data.showTooltip : true;
+            tooltipToggle.checked = showTooltip;
+            updateTooltipToggleLabelAppearance(showTooltip);
+        });
+    }
+
+    // Load shortcut and tooltip settings on page load
+    loadShortcut();
+    loadTooltipToggle();
+
+    // Capture new keyboard shortcut
+    let isCapturing = false;
+    captureShortcutButton.addEventListener('click', () => {
+        if (isCapturing) return;
+
+        isCapturing = true;
+        captureShortcutButton.disabled = true;
+        captureShortcutButton.textContent = 'Press key combo now...';
+
+        // Listen for the next keydown event
+        const captureHandler = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Ignore modifier-only keys
+            if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+                return;
+            }
+
+            // Create shortcut object from the pressed keys
+            const newShortcut = {
+                ctrl: event.ctrlKey,
+                alt: event.altKey,
+                shift: event.shiftKey,
+                meta: event.metaKey,
+                key: event.key
+            };
+
+            // Save the new shortcut
+            chrome.storage.sync.set({ keyboardShortcut: newShortcut }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error saving shortcut:', chrome.runtime.lastError);
+                    alert('An error occurred while saving the shortcut.');
+                } else {
+                    // Update display
+                    currentShortcutDisplay.textContent = formatShortcut(newShortcut);
+                }
+
+                // Reset capture state
+                isCapturing = false;
+                captureShortcutButton.disabled = false;
+                captureShortcutButton.textContent = 'Change Shortcut';
+
+                // Remove the event listener
+                document.removeEventListener('keydown', captureHandler, true);
+            });
+        };
+
+        // Add capture listener with capture phase to catch all events
+        document.addEventListener('keydown', captureHandler, true);
+
+        // Auto-cancel after 10 seconds of no input
+        setTimeout(() => {
+            if (isCapturing) {
+                isCapturing = false;
+                captureShortcutButton.disabled = false;
+                captureShortcutButton.textContent = 'Change Shortcut';
+                document.removeEventListener('keydown', captureHandler, true);
+            }
+        }, 10000);
+    });
+
+    // Reset to default shortcut
+    resetShortcutButton.addEventListener('click', () => {
+        chrome.storage.sync.set({ keyboardShortcut: defaultShortcut }, () => {
+            if (chrome.runtime.lastError) {
+                console.error('Error resetting shortcut:', chrome.runtime.lastError);
+                alert('An error occurred while resetting the shortcut.');
+            } else {
+                currentShortcutDisplay.textContent = formatShortcut(defaultShortcut);
+            }
+        });
+    });
+
+    // Save tooltip toggle setting when changed
+    tooltipToggle.addEventListener('change', () => {
+        const showTooltip = tooltipToggle.checked;
+        // Update label appearance immediately
+        updateTooltipToggleLabelAppearance(showTooltip);
+        // Save to storage
+        chrome.storage.sync.set({ showTooltip: showTooltip }, () => {
+            if (chrome.runtime.lastError) {
+                console.error('Error saving tooltip setting:', chrome.runtime.lastError);
+            } else {
+                console.log('Tooltip setting saved:', showTooltip);
             }
         });
     });
