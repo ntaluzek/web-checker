@@ -5,7 +5,7 @@ let mainTab;
 
 // Listen for messages from the popup or injected content
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "start" || message.action === "next") {
+    if (message.action === "start" || message.action === "next" || message.action === "restart") {
         sendResponse({status: 'received'});
         chrome.tabs.onUpdated.addListener(onTabUpdated);
         selectedList = message.list;
@@ -33,19 +33,26 @@ function onTabUpdated (tabId, changeInfo, tab) {
 function startUrlIteration(list, action) {
     // Get userLists data
     chrome.storage.sync.get("userLists", (data) => {
-        let userLists = data.userLists
+        let userLists = data.userLists;
         // Identify the list selected for iteration
         const userList = userLists.find(obj => obj.listName === list);
         // Get details about length of list and the index location
         listLength = userList.urlList.length;
+
+        // Handle the "restart" action
+        if (action === "restart") {
+            userList.index = 0; // Reset the index to the beginning of the list
+        }
+
         listIndex = userList.index;
+
         // Determine if the index is smaller than the length of the list to prevent
         // trying to access values outside of the list array
         if (listIndex < listLength) {
             // If the list iteration was "start"ed then create a new tab 
-            if (action === "start") {
+            if (action === "start" || action === "restart") {
                 chrome.tabs.create({ url: userList.urlList[listIndex] }, (tab) => {
-                chrome.storage.local.set({sessionTabId: tab.id});
+                    chrome.storage.local.set({ sessionTabId: tab.id });
                 });
             }
             // If the list iteration was "next" then update tab to next URL in list
