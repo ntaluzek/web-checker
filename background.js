@@ -36,48 +36,82 @@ function startUrlIteration(list, action) {
         let userLists = data.userLists;
         // Identify the list selected for iteration
         const userList = userLists.find(obj => obj.listName === list);
-        // Get details about length of list and the index location
-        listLength = userList.urlList.length;
 
-        // Handle the "restart" action
-        if (action === "restart") {
-            userList.index = 0; // Reset the index to the beginning of the list
+        // Function to proceed with URL iteration once we have the URL list
+        function proceedWithUrls(urls) {
+            // Get details about length of list and the index location
+            listLength = urls.length;
+
+            // Handle the "restart" action
+            if (action === "restart") {
+                userList.index = 0; // Reset the index to the beginning of the list
+            }
+
+            listIndex = userList.index;
+
+            // Determine if the index is smaller than the length of the list to prevent
+            // trying to access values outside of the list array
+            if (listIndex < listLength) {
+                // If the list iteration was "start"ed then create a new tab
+                if (action === "start" || action === "restart") {
+                    chrome.tabs.create({ url: urls[listIndex] }, (tab) => {
+                        chrome.storage.local.set({ sessionTabId: tab.id });
+                    });
+                }
+                // If the list iteration was "next" then update tab to next URL in list
+                else if (action === "next") {
+                    // Get information on the tab
+                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                        const currentTab = tabs[0];
+                        // Check that current tab id matches the one used by the extension
+                        if (currentTab) {
+                            const targetTabId = currentTab.id;
+                            // Update webpage being visited in the tab
+                            chrome.tabs.update(targetTabId, { url: urls[listIndex] });
+                        } else {
+                            console.error("No active tab found for next injection");
+                        }
+                    });
+                }
+                // Increase index value by one to indicate passage through the URL list
+                userList.index += 1;
+                // If index value becomes greater or equal to length of list, then restart index to 0
+                if (userList.index >= listLength) {
+                    userList.index = 0;
+                };
+                // Update the index value in storage
+                chrome.storage.sync.set({userLists: userLists});
+            } else {
+                console.error("List is empty or index out of bounds");
+            }
         }
 
-        listIndex = userList.index;
+        // Check if this is a bookmark-based list
+        if (userList.isBookmarkList && userList.bookmarkFolderId) {
+            // Fetch URLs from the bookmark folder
+            chrome.bookmarks.getChildren(userList.bookmarkFolderId, (bookmarks) => {
+                if (chrome.runtime.lastError) {
+                    console.error("Error fetching bookmarks:", chrome.runtime.lastError);
+                    alert("Error: Could not fetch bookmarks. The folder may have been deleted.");
+                    return;
+                }
 
-        // Determine if the index is smaller than the length of the list to prevent
-        // trying to access values outside of the list array
-        if (listIndex < listLength) {
-            // If the list iteration was "start"ed then create a new tab 
-            if (action === "start" || action === "restart") {
-                chrome.tabs.create({ url: userList.urlList[listIndex] }, (tab) => {
-                    chrome.storage.local.set({ sessionTabId: tab.id });
-                });
-            }
-            // If the list iteration was "next" then update tab to next URL in list
-            else if (action === "next") {
-                // Get information on the tab
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    const currentTab = tabs[0];
-                    // Check that current tab id matches the one used by the extension
-                    if (currentTab) {
-                        const targetTabId = currentTab.id;
-                        // Update webpage being visited in the tab
-                        chrome.tabs.update(targetTabId, { url: userList.urlList[listIndex] });
-                    } else {
-                        console.error("No active tab found for next injection");
-                    }
-                });
-            }
-            // Increase index value by one to indicate passage through the URL list
-            userList.index += 1;
-            // If index value becomes greater or equal to length of list, then restart index to 0
-            if (userList.index >= listLength) {
-                userList.index = 0;
-            };
-            // Update the index value in storage
-            chrome.storage.sync.set({userLists: userLists});
+                // Extract URLs from bookmarks (filter out folders)
+                const urls = bookmarks
+                    .filter(bookmark => bookmark.url) // Only include items with URLs
+                    .map(bookmark => bookmark.url);
+
+                if (urls.length === 0) {
+                    alert("Error: The selected bookmark folder is empty or contains no bookmarks.");
+                    return;
+                }
+
+                // Proceed with the URLs from bookmarks
+                proceedWithUrls(urls);
+            });
+        } else {
+            // Use manual URL list
+            proceedWithUrls(userList.urlList);
         }
     });
 };
