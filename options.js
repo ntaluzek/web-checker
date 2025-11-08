@@ -27,8 +27,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const listBox = createListBox();
                 // Then fill in the newly created box with the stored values
                 listBox.querySelector('.list-name.form-control').value = list.listName;
-                // Join the URLs in the textareas by a newline
-                listBox.querySelector('.url-list.form-control').value = list.urlList.join('\n');
+
+                // Check if this is a bookmark list or manual list
+                if (list.isBookmarkList && list.bookmarkFolderId) {
+                    // Set the list type to bookmark
+                    listBox.querySelector('.list-type-manual').checked = false;
+                    listBox.querySelector('.list-type-bookmark').checked = true;
+                    // Trigger change to update UI
+                    listBox.querySelector('.list-type-bookmark').dispatchEvent(new Event('change'));
+                    // Set the selected bookmark folder after dropdown is populated
+                    setTimeout(() => {
+                        listBox.querySelector('.bookmark-folder-select').value = list.bookmarkFolderId;
+                    }, 100);
+                } else {
+                    // Join the URLs in the textareas by a newline for manual lists
+                    listBox.querySelector('.url-list.form-control').value = list.urlList.join('\n');
+                }
+
                 // Add new listBox to the DOM inside the listContainer
                 listContainer.appendChild(listBox);
             });
@@ -45,20 +60,112 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create div for the box
         const listBox = document.createElement('div');
         listBox.classList.add('list-box', 'form-control');
+
         // Create input for the list name
         const listName = document.createElement('input');
         listName.type = 'text';
         listName.classList.add('list-name', 'form-control');
         listName.placeholder = 'List Name';
+
+        // Create list type selector container
+        const typeContainer = document.createElement('div');
+        typeContainer.classList.add('list-type-container', 'mb-2');
+        typeContainer.style.display = 'flex';
+        typeContainer.style.gap = '15px';
+        typeContainer.style.marginTop = '10px';
+
+        // Manual URLs radio button
+        const manualRadio = document.createElement('input');
+        manualRadio.type = 'radio';
+        manualRadio.name = `listType_${Date.now()}_${Math.random()}`;
+        manualRadio.classList.add('list-type-manual', 'form-check-input');
+        manualRadio.id = `manual_${Date.now()}_${Math.random()}`;
+        manualRadio.checked = true;
+
+        const manualLabel = document.createElement('label');
+        manualLabel.textContent = 'Manual URLs';
+        manualLabel.htmlFor = manualRadio.id;
+        manualLabel.style.marginRight = '15px';
+
+        // Bookmark folder radio button
+        const bookmarkRadio = document.createElement('input');
+        bookmarkRadio.type = 'radio';
+        bookmarkRadio.name = manualRadio.name;
+        bookmarkRadio.classList.add('list-type-bookmark', 'form-check-input');
+        bookmarkRadio.id = `bookmark_${Date.now()}_${Math.random()}`;
+
+        const bookmarkLabel = document.createElement('label');
+        bookmarkLabel.textContent = 'Bookmark Folder';
+        bookmarkLabel.htmlFor = bookmarkRadio.id;
+
+        typeContainer.appendChild(manualRadio);
+        typeContainer.appendChild(manualLabel);
+        typeContainer.appendChild(bookmarkRadio);
+        typeContainer.appendChild(bookmarkLabel);
+
         // Create input for the list textarea where URLs will be entered
         const urlList = document.createElement('textarea');
         urlList.classList.add('url-list', 'form-control');
         urlList.placeholder = 'Enter URLs (one per line)';
 
+        // Create bookmark folder dropdown (hidden by default)
+        const bookmarkSelect = document.createElement('select');
+        bookmarkSelect.classList.add('bookmark-folder-select', 'form-control');
+        bookmarkSelect.style.display = 'none';
+
+        // Populate bookmark folders
+        populateBookmarkFolders(bookmarkSelect);
+
+        // Add event listeners to toggle between manual and bookmark mode
+        manualRadio.addEventListener('change', () => {
+            if (manualRadio.checked) {
+                urlList.style.display = 'block';
+                bookmarkSelect.style.display = 'none';
+            }
+        });
+
+        bookmarkRadio.addEventListener('change', () => {
+            if (bookmarkRadio.checked) {
+                urlList.style.display = 'none';
+                bookmarkSelect.style.display = 'block';
+            }
+        });
+
         listBox.appendChild(listName);
+        listBox.appendChild(typeContainer);
         listBox.appendChild(urlList);
+        listBox.appendChild(bookmarkSelect);
 
         return listBox;
+    }
+
+    // Function to populate bookmark folders in a dropdown
+    function populateBookmarkFolders(selectElement) {
+        chrome.bookmarks.getTree((bookmarkTreeNodes) => {
+            // Clear existing options
+            selectElement.innerHTML = '<option value="">Select a bookmark folder...</option>';
+
+            // Recursive function to traverse bookmark tree and find folders
+            function traverseBookmarks(nodes, depth = 0) {
+                nodes.forEach(node => {
+                    // Only add folders (nodes without url property)
+                    if (!node.url && node.title) {
+                        const option = document.createElement('option');
+                        option.value = node.id;
+                        // Add indentation based on depth for visual hierarchy
+                        option.textContent = '\u00A0\u00A0'.repeat(depth) + node.title;
+                        selectElement.appendChild(option);
+                    }
+
+                    // Recursively traverse children
+                    if (node.children) {
+                        traverseBookmarks(node.children, depth + 1);
+                    }
+                });
+            }
+
+            traverseBookmarks(bookmarkTreeNodes);
+        });
     }
 
     // Add a new list box when the "Add New List" button is clicked
@@ -72,20 +179,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const listData = []; // Array to hold the list data
         const listNames = new Set(); // Set to track unique list names
         let hasDuplicates = false; // Flag to check for duplicates
-    
+
         // Loop through all list boxes and collect the data
         const listBoxes = document.getElementsByClassName('list-box');
         // Iterate in reverse to avoid index issues when removing elements
-        for (let i = listBoxes.length - 1; i >= 0; i--) { 
+        for (let i = listBoxes.length - 1; i >= 0; i--) {
             const listBox = listBoxes[i];
             // Capture the name in the list box and trim any extra whitespace
             const listName = listBox.getElementsByClassName('list-name')[0].value.trim();
-            // Capture the URLs, splitting by newlines and checking if any are empty values
-            const urlList = listBox.getElementsByClassName('url-list')[0].value
-                .split('\n')
-                .map(url => url.trim())
-                .filter(url => url !== ''); // Filter out empty URLs
-    
+
+            // Check which list type is selected
+            const isBookmarkList = listBox.querySelector('.list-type-bookmark').checked;
+
+            let urlList = [];
+            let bookmarkFolderId = null;
+
+            if (isBookmarkList) {
+                // Get the selected bookmark folder ID
+                bookmarkFolderId = listBox.querySelector('.bookmark-folder-select').value;
+            } else {
+                // Capture the URLs, splitting by newlines and checking if any are empty values
+                urlList = listBox.getElementsByClassName('url-list')[0].value
+                    .split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url !== ''); // Filter out empty URLs
+            }
+
             // Check for duplicate list names
             if (listNames.has(listName)) {
                 hasDuplicates = true;
@@ -93,15 +212,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             listNames.add(listName);
-    
-            // Only add to listData and keep in DOM if the listName is not empty or urlList has at least one URL
-            if (listName || urlList.length > 0) {
-                listData.push({
+
+            // Only add to listData if the listName is not empty and either has URLs or a bookmark folder
+            if (listName && (urlList.length > 0 || bookmarkFolderId)) {
+                const listObject = {
                     listName: listName,
                     urlList: urlList,
                     index: 0
-                });
-            } else {
+                };
+
+                // Add bookmark-specific fields if this is a bookmark list
+                if (isBookmarkList && bookmarkFolderId) {
+                    listObject.isBookmarkList = true;
+                    listObject.bookmarkFolderId = bookmarkFolderId;
+                }
+
+                listData.push(listObject);
+            } else if (!listName && !urlList.length && !bookmarkFolderId) {
                 // Remove empty list boxes from the DOM
                 listBox.parentNode.removeChild(listBox);
             }
@@ -111,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('There are duplicate list names. Please remove duplicates before saving.');
             return;
         }
-    
+
         // Save the non-empty data to Chrome storage
         chrome.storage.sync.set({ userLists: listData }, () => {
             if (chrome.runtime.lastError) {
