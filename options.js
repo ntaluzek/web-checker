@@ -55,11 +55,156 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Drag and drop variables and handlers
+    let draggedElement = null;
+
+    function handleDragStart(e) {
+        draggedElement = this;
+        this.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+
+        // Visual feedback: add a border to show where the item will be dropped
+        if (this !== draggedElement && this.classList.contains('list-box')) {
+            const rect = this.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+
+            // Remove any existing drop indicators
+            document.querySelectorAll('.list-box').forEach(box => {
+                box.style.borderTop = '';
+                box.style.borderBottom = '';
+            });
+
+            if (e.clientY < midpoint) {
+                this.style.borderTop = '3px solid #007bff';
+            } else {
+                this.style.borderBottom = '3px solid #007bff';
+            }
+        }
+
+        return false;
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        if (draggedElement !== this && this.classList.contains('list-box')) {
+            const rect = this.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                listContainer.insertBefore(draggedElement, this);
+            } else {
+                listContainer.insertBefore(draggedElement, this.nextSibling);
+            }
+        }
+
+        return false;
+    }
+
+    function handleDragEnd() {
+        this.style.opacity = '1';
+        // Disable dragging after drop
+        this.setAttribute('draggable', 'false');
+
+        // Remove all drop indicators
+        document.querySelectorAll('.list-box').forEach(box => {
+            box.style.borderTop = '';
+            box.style.borderBottom = '';
+        });
+    }
+
     // Function to create a new list box
     function createListBox() {
         // Create div for the box
         const listBox = document.createElement('div');
         listBox.classList.add('list-box', 'form-control');
+        // Don't make the entire box draggable by default
+        listBox.setAttribute('draggable', 'false');
+
+        // Create a wrapper for reorder controls and content
+        const contentWrapper = document.createElement('div');
+        contentWrapper.style.display = 'flex';
+        contentWrapper.style.gap = '10px';
+
+        // Create reorder controls container (left side)
+        const reorderControls = document.createElement('div');
+        reorderControls.classList.add('reorder-controls');
+        reorderControls.style.display = 'flex';
+        reorderControls.style.flexDirection = 'column';
+        reorderControls.style.justifyContent = 'center';
+        reorderControls.style.gap = '5px';
+        reorderControls.style.minWidth = '30px';
+
+        // Create up arrow button
+        const upButton = document.createElement('button');
+        upButton.innerHTML = '&uarr;';
+        upButton.classList.add('btn', 'btn-sm', 'btn-secondary', 'reorder-up');
+        upButton.type = 'button';
+        upButton.style.padding = '2px 8px';
+        upButton.style.fontSize = '14px';
+        upButton.title = 'Move up';
+        upButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const prevBox = listBox.previousElementSibling;
+            if (prevBox && prevBox.classList.contains('list-box')) {
+                listContainer.insertBefore(listBox, prevBox);
+            }
+        });
+
+        // Create down arrow button
+        const downButton = document.createElement('button');
+        downButton.innerHTML = '&darr;';
+        downButton.classList.add('btn', 'btn-sm', 'btn-secondary', 'reorder-down');
+        downButton.type = 'button';
+        downButton.style.padding = '2px 8px';
+        downButton.style.fontSize = '14px';
+        downButton.title = 'Move down';
+        downButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const nextBox = listBox.nextElementSibling;
+            if (nextBox && nextBox.classList.contains('list-box')) {
+                listContainer.insertBefore(nextBox, listBox);
+            }
+        });
+
+        // Create drag handle indicator
+        const dragHandle = document.createElement('div');
+        dragHandle.innerHTML = '&#8942;&#8942;';
+        dragHandle.style.fontSize = '16px';
+        dragHandle.style.color = '#999';
+        dragHandle.style.cursor = 'move';
+        dragHandle.style.textAlign = 'center';
+        dragHandle.style.userSelect = 'none';
+        dragHandle.style.letterSpacing = '-2px';
+        dragHandle.title = 'Drag to reorder';
+        dragHandle.classList.add('drag-handle');
+
+        // Enable dragging only when the drag handle is grabbed
+        dragHandle.addEventListener('mousedown', () => {
+            listBox.setAttribute('draggable', 'true');
+        });
+
+        dragHandle.addEventListener('mouseup', () => {
+            listBox.setAttribute('draggable', 'false');
+        });
+
+        reorderControls.appendChild(upButton);
+        reorderControls.appendChild(dragHandle);
+        reorderControls.appendChild(downButton);
+
+        // Create main content container (right side)
+        const mainContent = document.createElement('div');
+        mainContent.style.flex = '1';
 
         // Create header container for list name and delete button
         const listHeader = document.createElement('div');
@@ -156,10 +301,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        listBox.appendChild(listHeader);
-        listBox.appendChild(typeContainer);
-        listBox.appendChild(urlList);
-        listBox.appendChild(bookmarkSelect);
+        mainContent.appendChild(listHeader);
+        mainContent.appendChild(typeContainer);
+        mainContent.appendChild(urlList);
+        mainContent.appendChild(bookmarkSelect);
+
+        // Assemble the list box
+        contentWrapper.appendChild(reorderControls);
+        contentWrapper.appendChild(mainContent);
+        listBox.appendChild(contentWrapper);
+
+        // Add drag and drop event listeners
+        listBox.addEventListener('dragstart', handleDragStart);
+        listBox.addEventListener('dragover', handleDragOver);
+        listBox.addEventListener('drop', handleDrop);
+        listBox.addEventListener('dragend', handleDragEnd);
 
         return listBox;
     }
@@ -215,9 +371,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let hasDuplicates = false; // Flag to check for duplicates
 
             // Loop through all list boxes and collect the data
-            const listBoxes = document.getElementsByClassName('list-box');
-            // Iterate in reverse to avoid index issues when removing elements
-            for (let i = listBoxes.length - 1; i >= 0; i--) {
+            const listBoxes = Array.from(document.getElementsByClassName('list-box'));
+            // Store boxes to remove after iteration to avoid index issues
+            const boxesToRemove = [];
+
+            // Iterate through all list boxes in their current order
+            for (let i = 0; i < listBoxes.length; i++) {
                 const listBox = listBoxes[i];
                 // Capture the name in the list box and trim any extra whitespace
                 const listName = listBox.getElementsByClassName('list-name')[0].value.trim();
@@ -291,10 +450,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         listData.push(listObject);
                     }
                 } else if (!listName && !urlList.length && !bookmarkFolderId) {
-                    // Remove completely empty list boxes from the DOM
-                    listBox.parentNode.removeChild(listBox);
+                    // Mark completely empty list boxes for removal
+                    boxesToRemove.push(listBox);
                 }
             }
+
+            // Remove empty boxes after iteration
+            boxesToRemove.forEach(box => {
+                if (box.parentNode) {
+                    box.parentNode.removeChild(box);
+                }
+            });
+
             // Prevent saving if duplicates are found
             if (hasDuplicates) {
                 alert('There are duplicate list names. Please remove duplicates before saving.');
