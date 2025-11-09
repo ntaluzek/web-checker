@@ -201,90 +201,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save the lists to Chrome storage when the "Save Lists" button is clicked
     saveButton.addEventListener('click', () => {
-        const listData = []; // Array to hold the list data
-        const listNames = new Set(); // Set to track unique list names
-        let hasDuplicates = false; // Flag to check for duplicates
+        // First, load existing lists from storage to preserve their index values
+        chrome.storage.sync.get("userLists", (data) => {
+            const existingLists = data.userLists || [];
+            // Create a map of existing lists by name for quick lookup
+            const existingListsMap = new Map();
+            existingLists.forEach(list => {
+                existingListsMap.set(list.listName, list);
+            });
 
-        // Loop through all list boxes and collect the data
-        const listBoxes = document.getElementsByClassName('list-box');
-        // Iterate in reverse to avoid index issues when removing elements
-        for (let i = listBoxes.length - 1; i >= 0; i--) {
-            const listBox = listBoxes[i];
-            // Capture the name in the list box and trim any extra whitespace
-            const listName = listBox.getElementsByClassName('list-name')[0].value.trim();
+            const listData = []; // Array to hold the list data
+            const listNames = new Set(); // Set to track unique list names
+            let hasDuplicates = false; // Flag to check for duplicates
 
-            // Check which list type is selected
-            const isBookmarkList = listBox.querySelector('.list-type-bookmark').checked;
+            // Loop through all list boxes and collect the data
+            const listBoxes = document.getElementsByClassName('list-box');
+            // Iterate in reverse to avoid index issues when removing elements
+            for (let i = listBoxes.length - 1; i >= 0; i--) {
+                const listBox = listBoxes[i];
+                // Capture the name in the list box and trim any extra whitespace
+                const listName = listBox.getElementsByClassName('list-name')[0].value.trim();
 
-            let urlList = [];
-            let bookmarkFolderId = null;
+                // Check which list type is selected
+                const isBookmarkList = listBox.querySelector('.list-type-bookmark').checked;
 
-            if (isBookmarkList) {
-                // Get the selected bookmark folder ID
-                bookmarkFolderId = listBox.querySelector('.bookmark-folder-select').value;
-            } else {
-                // Capture the URLs, splitting by newlines and checking if any are empty values
-                urlList = listBox.getElementsByClassName('url-list')[0].value
-                    .split('\n')
-                    .map(url => url.trim())
-                    .filter(url => url !== ''); // Filter out empty URLs
-            }
+                let urlList = [];
+                let bookmarkFolderId = null;
 
-            // Check for duplicate list names
-            if (listNames.has(listName)) {
-                hasDuplicates = true;
-                // Exit the loop if a duplicate is found
-                break;
-            }
-            listNames.add(listName);
-
-            // Add to listData if the listName is not empty and:
-            // - For manual lists: always save (even if empty)
-            // - For bookmark lists: must have a bookmark folder selected
-            if (listName) {
                 if (isBookmarkList) {
-                    // Bookmark lists must have a folder selected
-                    if (bookmarkFolderId) {
+                    // Get the selected bookmark folder ID
+                    bookmarkFolderId = listBox.querySelector('.bookmark-folder-select').value;
+                } else {
+                    // Capture the URLs, splitting by newlines and checking if any are empty values
+                    urlList = listBox.getElementsByClassName('url-list')[0].value
+                        .split('\n')
+                        .map(url => url.trim())
+                        .filter(url => url !== ''); // Filter out empty URLs
+                }
+
+                // Check for duplicate list names
+                if (listNames.has(listName)) {
+                    hasDuplicates = true;
+                    // Exit the loop if a duplicate is found
+                    break;
+                }
+                listNames.add(listName);
+
+                // Add to listData if the listName is not empty and:
+                // - For manual lists: always save (even if empty)
+                // - For bookmark lists: must have a bookmark folder selected
+                if (listName) {
+                    // Try to find the existing list to preserve its index
+                    const existingList = existingListsMap.get(listName);
+                    let preservedIndex = 0;
+
+                    if (existingList) {
+                        // Preserve the index from the existing list
+                        preservedIndex = existingList.index || 0;
+
+                        // For manual lists, validate that the preserved index doesn't exceed the new list length
+                        if (!isBookmarkList && urlList.length > 0 && preservedIndex >= urlList.length) {
+                            // Reset to 0 if the index would be out of bounds
+                            preservedIndex = 0;
+                        }
+                        // Note: For bookmark lists, we can't validate here since we don't have the bookmark URLs yet
+                        // The background.js will handle out-of-bounds index when it loads bookmark URLs
+                    }
+
+                    if (isBookmarkList) {
+                        // Bookmark lists must have a folder selected
+                        if (bookmarkFolderId) {
+                            const listObject = {
+                                listName: listName,
+                                urlList: urlList,
+                                index: preservedIndex,
+                                isBookmarkList: true,
+                                bookmarkFolderId: bookmarkFolderId
+                            };
+                            listData.push(listObject);
+                        }
+                        // If bookmark list has no folder, don't save it (but keep in DOM)
+                    } else {
+                        // Manual lists are saved even if empty
                         const listObject = {
                             listName: listName,
                             urlList: urlList,
-                            index: 0,
-                            isBookmarkList: true,
-                            bookmarkFolderId: bookmarkFolderId
+                            index: preservedIndex
                         };
                         listData.push(listObject);
                     }
-                    // If bookmark list has no folder, don't save it (but keep in DOM)
-                } else {
-                    // Manual lists are saved even if empty
-                    const listObject = {
-                        listName: listName,
-                        urlList: urlList,
-                        index: 0
-                    };
-                    listData.push(listObject);
+                } else if (!listName && !urlList.length && !bookmarkFolderId) {
+                    // Remove completely empty list boxes from the DOM
+                    listBox.parentNode.removeChild(listBox);
                 }
-            } else if (!listName && !urlList.length && !bookmarkFolderId) {
-                // Remove completely empty list boxes from the DOM
-                listBox.parentNode.removeChild(listBox);
             }
-        }
-        // Prevent saving if duplicates are found
-        if (hasDuplicates) {
-            alert('There are duplicate list names. Please remove duplicates before saving.');
-            return;
-        }
+            // Prevent saving if duplicates are found
+            if (hasDuplicates) {
+                alert('There are duplicate list names. Please remove duplicates before saving.');
+                return;
+            }
 
-        // Save the non-empty data to Chrome storage
-        chrome.storage.sync.set({ userLists: listData }, () => {
-            if (chrome.runtime.lastError) {
-                // Handle any errors that occurred during the save operation
-                console.error('Error saving data:', chrome.runtime.lastError);
-                alert('An error occurred while saving the lists.');
-            } else {
-                // Show an alert message indicating success
-                alert('Your lists have been successfully saved!');
-            }
+            // Save the non-empty data to Chrome storage
+            chrome.storage.sync.set({ userLists: listData }, () => {
+                if (chrome.runtime.lastError) {
+                    // Handle any errors that occurred during the save operation
+                    console.error('Error saving data:', chrome.runtime.lastError);
+                    alert('An error occurred while saving the lists.');
+                } else {
+                    // Show an alert message indicating success
+                    alert('Your lists have been successfully saved!');
+                }
+            });
         });
     });
 
