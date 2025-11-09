@@ -61,11 +61,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const listBox = document.createElement('div');
         listBox.classList.add('list-box', 'form-control');
 
+        // Create header container for list name and delete button
+        const listHeader = document.createElement('div');
+        listHeader.classList.add('list-header');
+        listHeader.style.display = 'flex';
+        listHeader.style.justifyContent = 'space-between';
+        listHeader.style.alignItems = 'center';
+        listHeader.style.gap = '10px';
+        listHeader.style.marginBottom = '10px';
+
         // Create input for the list name
         const listName = document.createElement('input');
         listName.type = 'text';
         listName.classList.add('list-name', 'form-control');
         listName.placeholder = 'List Name';
+        listName.style.flex = '1';
+
+        // Create delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.classList.add('btn', 'btn-sm', 'btn-danger');
+        deleteButton.type = 'button';
+        deleteButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to delete this list?')) {
+                listBox.parentNode.removeChild(listBox);
+            }
+        });
+
+        // Add list name and delete button to header
+        listHeader.appendChild(listName);
+        listHeader.appendChild(deleteButton);
 
         // Create list type selector container
         const typeContainer = document.createElement('div');
@@ -131,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        listBox.appendChild(listName);
+        listBox.appendChild(listHeader);
         listBox.appendChild(typeContainer);
         listBox.appendChild(urlList);
         listBox.appendChild(bookmarkSelect);
@@ -213,23 +238,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             listNames.add(listName);
 
-            // Only add to listData if the listName is not empty and either has URLs or a bookmark folder
-            if (listName && (urlList.length > 0 || bookmarkFolderId)) {
-                const listObject = {
-                    listName: listName,
-                    urlList: urlList,
-                    index: 0
-                };
-
-                // Add bookmark-specific fields if this is a bookmark list
-                if (isBookmarkList && bookmarkFolderId) {
-                    listObject.isBookmarkList = true;
-                    listObject.bookmarkFolderId = bookmarkFolderId;
+            // Add to listData if the listName is not empty and:
+            // - For manual lists: always save (even if empty)
+            // - For bookmark lists: must have a bookmark folder selected
+            if (listName) {
+                if (isBookmarkList) {
+                    // Bookmark lists must have a folder selected
+                    if (bookmarkFolderId) {
+                        const listObject = {
+                            listName: listName,
+                            urlList: urlList,
+                            index: 0,
+                            isBookmarkList: true,
+                            bookmarkFolderId: bookmarkFolderId
+                        };
+                        listData.push(listObject);
+                    }
+                    // If bookmark list has no folder, don't save it (but keep in DOM)
+                } else {
+                    // Manual lists are saved even if empty
+                    const listObject = {
+                        listName: listName,
+                        urlList: urlList,
+                        index: 0
+                    };
+                    listData.push(listObject);
                 }
-
-                listData.push(listObject);
             } else if (!listName && !urlList.length && !bookmarkFolderId) {
-                // Remove empty list boxes from the DOM
+                // Remove completely empty list boxes from the DOM
                 listBox.parentNode.removeChild(listBox);
             }
         }
