@@ -3,10 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	chrome.storage.sync.get("userLists", (data) => {
 		// Either have loaded data or create empty list
 		const userLists = data.userLists || [];
-		// Reverse the userLists array since they are stored in reverse within options.js
-		const reversedUserLists = userLists.reverse();
-		// Create buttons based on saved user URL lists
-		renderUserLists(reversedUserLists);
+		// Create buttons based on saved user URL lists in their saved order
+		renderUserLists(userLists);
 	});
 
 	// Add click event listener for navigating to extension options page
