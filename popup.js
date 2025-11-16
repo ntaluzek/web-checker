@@ -14,90 +14,123 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 });
 
+// Helper function to create a button with common properties
+function createButton(text, classes, styles = {}) {
+	const button = document.createElement("button");
+	button.textContent = text;
+	button.classList.add("btn", ...classes);
+
+	// Apply default styles
+	const defaultStyles = { fontSize: "0.9em" };
+	Object.assign(button.style, defaultStyles, styles);
+
+	return button;
+}
+
+// Helper function to apply styles to an element
+function applyStyles(element, styles) {
+	Object.assign(element.style, styles);
+}
+
 // Function to display the list of URLs with buttons
 function renderUserLists(userLists) {
     const listContainer = document.getElementById("listContainer");
-    // Clear any existing content
     listContainer.innerHTML = '';
-    // Iterate through every user URL list and create the new format
+
     userLists.forEach((list) => {
-        // Create a container for the list box
+        // Create list box container
         const listBox = document.createElement("div");
         listBox.classList.add("list-box");
-        listBox.style.border = "1px solid #ccc";
-        listBox.style.borderRadius = "8px";
-        listBox.style.padding = "10px";
-        listBox.style.marginBottom = "15px";
-        listBox.style.textAlign = "center";
-        listBox.style.backgroundColor = "#f9f9f9";
+        applyStyles(listBox, {
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            padding: "10px",
+            marginBottom: "15px",
+            textAlign: "center",
+            backgroundColor: "#f9f9f9"
+        });
 
-        // Create the list name element
+        // Create list name element
         const listName = document.createElement("div");
         listName.textContent = list.listName;
-        listName.style.fontWeight = "bold";
-        listName.style.marginBottom = "10px";
-        listName.style.fontSize = "1.2em"; // Make the list name larger
+        applyStyles(listName, {
+            fontWeight: "bold",
+            marginBottom: "10px",
+            fontSize: "1.2em"
+        });
 
-        // Create a container for the buttons
+        // Create button row container
         const buttonRow = document.createElement("div");
-        buttonRow.style.display = "flex";
-        buttonRow.style.justifyContent = "space-between";
-        buttonRow.style.alignItems = "center";
+        applyStyles(buttonRow, {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+        });
 
         // Function to create and populate the buttons once we have the URL count and list
         function createButtons(urls, totalUrls, isBookmarkList = false) {
-            // Check if the list is empty
+            // Handle empty list case
             if (totalUrls === 0) {
-                // Create a single greyed out button with appropriate message
-                const emptyButton = document.createElement("button");
-                emptyButton.textContent = isBookmarkList ? "Empty Bookmark Folder" : "Empty List";
-                emptyButton.classList.add("btn", "btn-secondary");
-                emptyButton.style.flex = "1";
-                emptyButton.style.fontSize = "0.9em";
+                const emptyButton = createButton(
+                    isBookmarkList ? "Empty Bookmark Folder" : "Empty List",
+                    ["btn-secondary"],
+                    { flex: "1", opacity: "0.5", cursor: "not-allowed" }
+                );
                 emptyButton.disabled = true;
-                emptyButton.style.opacity = "0.5";
-                emptyButton.style.cursor = "not-allowed";
-
-                // Append the empty button to the button row
                 buttonRow.appendChild(emptyButton);
                 return;
             }
 
             const currentIndex = list.index || 0;
-            const progressText = `Resume (${currentIndex + 1}/${totalUrls})`;
 
-            // Create the "Resume" button
-            const resumeButton = document.createElement("button");
-            resumeButton.textContent = progressText;
-            resumeButton.classList.add("btn", "btn-primary", "resume-button");
-            resumeButton.style.flex = "1";
-            resumeButton.style.fontSize = "0.9em"; // Make the button text smaller
-            resumeButton.style.marginRight = "5px";
+            // Show "Start" button when at the beginning
+            if (currentIndex === 0) {
+                const startButton = createButton("Start", ["btn-primary", "start-button"], { flex: "1" });
 
-            // Set hover text (tooltip) to show the next URL
-            if (urls && urls[currentIndex]) {
-                resumeButton.title = urls[currentIndex]; // Tooltip shows the current URL
+                if (urls?.[0]) {
+                    startButton.title = urls[0];
+                }
+
+                startButton.addEventListener("click", () => {
+                    chrome.runtime.sendMessage({ action: "start", list: list.listName });
+                });
+
+                buttonRow.appendChild(startButton);
+            } else {
+                // Show "Resume" and "Reset" buttons when there's progress
+                const resumeButton = createButton(
+                    `Resume (${currentIndex + 1}/${totalUrls})`,
+                    ["btn-primary", "resume-button"],
+                    { flex: "1", marginRight: "5px" }
+                );
+
+                if (urls?.[currentIndex]) {
+                    resumeButton.title = urls[currentIndex];
+                }
+
+                resumeButton.addEventListener("click", () => {
+                    chrome.runtime.sendMessage({ action: "start", list: list.listName });
+                });
+
+                const resetButton = createButton(
+                    String.fromCharCode(0x21BA),
+                    ["btn-secondary", "reset-button"],
+                    { width: "40px", textAlign: "center", marginLeft: "5px" }
+                );
+
+                resetButton.addEventListener("click", () => {
+                    chrome.runtime.sendMessage({ action: "reset", list: list.listName }, () => {
+                        // Reload the popup to show the updated button state
+                        chrome.storage.sync.get("userLists", (data) => {
+                            const userLists = data.userLists || [];
+                            renderUserLists(userLists);
+                        });
+                    });
+                });
+
+                buttonRow.appendChild(resumeButton);
+                buttonRow.appendChild(resetButton);
             }
-
-            resumeButton.addEventListener("click", () => {
-                chrome.runtime.sendMessage({ action: "start", list: list.listName });
-            });
-
-            // Create the "Restart" button with an icon
-            const restartButton = document.createElement("button");
-            restartButton.classList.add("btn", "btn-secondary", "restart-button");
-            restartButton.style.width = "40px"; // Restrict width to fit the icon
-            restartButton.style.textAlign = "center"; // Center the icon
-            restartButton.style.marginLeft = "5px";
-            restartButton.style.fontSize = "0.9em"; // Make the button text smaller
-            restartButton.textContent = String.fromCharCode(0x21BA); // Unicode for counterclockwise arrow
-            restartButton.addEventListener("click", () => {
-                chrome.runtime.sendMessage({ action: "restart", list: list.listName });
-            });
-
-            // Append the buttons to the button row
-            buttonRow.appendChild(resumeButton);
-            buttonRow.appendChild(restartButton);
         }
 
         // Check if this is a bookmark-based list
