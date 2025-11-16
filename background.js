@@ -5,12 +5,19 @@ let mainTab;
 
 // Listen for messages from the popup or injected content
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "start" || message.action === "next" || message.action === "restart") {
+    if (message.action === "start" || message.action === "next") {
         sendResponse({status: 'received'});
         chrome.tabs.onUpdated.addListener(onTabUpdated);
         selectedList = message.list;
         // Start iterating through URLs
         startUrlIteration(selectedList, message.action);
+    }
+    else if (message.action === "reset") {
+        // Reset the list index without starting iteration
+        resetListIndex(message.list, () => {
+            sendResponse({status: 'reset complete'});
+        });
+        return true; // Keep the message channel open for async response
     }
     else if (message.action === "close") {
         chrome.tabs.onUpdated.removeListener(onTabUpdated);
@@ -41,19 +48,13 @@ function startUrlIteration(list, action) {
         function proceedWithUrls(urls) {
             // Get details about length of list and the index location
             listLength = urls.length;
-
-            // Handle the "restart" action
-            if (action === "restart") {
-                userList.index = 0; // Reset the index to the beginning of the list
-            }
-
             listIndex = userList.index;
 
             // Determine if the index is smaller than the length of the list to prevent
             // trying to access values outside of the list array
             if (listIndex < listLength) {
                 // If the list iteration was "start"ed then create a new tab
-                if (action === "start" || action === "restart") {
+                if (action === "start") {
                     chrome.tabs.create({ url: urls[listIndex] }, (tab) => {
                         chrome.storage.local.set({ sessionTabId: tab.id });
                     });
@@ -115,6 +116,23 @@ function startUrlIteration(list, action) {
         }
     });
 };
+
+// Reset list index to 0 without starting iteration
+function resetListIndex(list, callback) {
+    chrome.storage.sync.get("userLists", (data) => {
+        let userLists = data.userLists;
+        const userList = userLists.find(obj => obj.listName === list);
+
+        if (userList) {
+            userList.index = 0;
+            chrome.storage.sync.set({userLists: userLists}, () => {
+                if (callback) callback();
+            });
+        } else if (callback) {
+            callback();
+        }
+    });
+}
 
 // Inject the content.js script into the appropriate browswer tab
 function injectContentScript(tabId) {
