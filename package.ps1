@@ -25,6 +25,7 @@ $filesToInclude = @(
     "options.html",
     "options.js",
     "options.css",
+    "bootstrap.css",
     "LICENSE",
     "README.md",
     "icons"
