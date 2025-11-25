@@ -45,6 +45,17 @@ In the floating box there is also a close button in the form of an x. If you dec
 
 If you did not reach the end of your list before closing out of the Web Checker session then when you start again you will resume with the next page that you had not yet visited. This ensures that you get to go through your list in its entirety instead of having to restart back at the beginning every time.
 
+## Future Features
+
+The following features are planned for future releases:
+
+- **Frequency Limiting** - Add tracking to limit how often you can cycle through lists (e.g., once per day, once per hour)
+- **Restart Confirmation** - Add a confirmation prompt at the end of a list before restarting from the beginning
+- **Session Time Limits** - Add tracking to limit the total time spent cycling through lists
+- **Per-Website Time Tracking** - Add tracking to limit time spent on individual websites within your lists
+
+Have a feature request? Feel free to [open an issue](https://github.com/ntaluzek/web-checker/issues) on GitHub!
+
 ## Privacy
 
 Web Checker respects your privacy. All your URL lists and preferences are stored locally in your browser using Chrome Sync. No data is transmitted to external servers or the extension developer. For complete details, see our [Privacy Policy](https://github.com/ntaluzek/web-checker/blob/main/PRIVACY.md).
