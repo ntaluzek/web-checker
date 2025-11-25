@@ -1,5 +1,8 @@
+![Web Checker Logo Banner](assets/marquee_promo_tile.png "Web Checker Logo Banner")
 # Web-Checker
 Web Checker is a Chromium browser extension used to quickly and easily cycle through lists of websites.
+
+![Web Checker in use showing the floating navigation box](assets/in_use_example_0.1.0.png "Web Checker In Use Example")
 
 ## Summary
 We are creatures of habits and routines and browsing the internet is no exception to this. With Web Checker we can simplify that process to make our browsing experience a little bit easier and perhaps be more intentional in how we spend our time online.
